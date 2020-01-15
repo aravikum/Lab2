@@ -89,6 +89,9 @@ exl_df <- read_excel("raw_data/Lab2_data.xlsx",
                                    "bristol_score" = "numeric")) 
 
 # type into the console: exl_df
+
+exl_df
+
 ```
 
 The output in the console is similar to what we created above, we can see the dimensions (rows and columns) and type of each variable. For example, the tube_wt column contains dbl (double precision) numbers and the Participant_ID column contains chr (character) values. You’ll also notice that zero values have a lighter color and any NAs are red. These features are all meant to improve the visualization of the data.
@@ -101,14 +104,14 @@ This format is an easy way to identify a tibble. Tibbles tweak some of the defau
 The functions below can provide useful information about a data frame. When you first import a data frame you likely will want to view it, or part of it. Run each function below on the data frame `exl_df`, and read the help pages if necessary. In the comments briefly describe what each function tells you about the data frame. 
 
 ```{r eval=FALSE, include=FALSE}
-nrow() #
-ncol() #
-dim() #
-colnames() #
-rownames() #
-glimpse() #
-str() #
-summary() # 
+nrow(exl_df) #number of rows
+ncol(exl_df) #number of columns
+dim(exl_df) #The dimensions of the dataframe
+colnames(exl_df) #Names of the columns
+rownames(exl_df) #Names of the rows
+glimpse(exl_df) #show all the columns of the dataframe
+str(exl_df) #prints the structure of the dataframe
+summary(exl_df) # displays 5 number summary and the mean for every column
 ```
 
 
@@ -222,9 +225,12 @@ Scroll through the output, the mutate function adds new columns to the end of th
 
 You can also create a second new column based on the first new column within the same call of mutate(). To convert miliMolar (mM) to milimoles (mmol), we have to multiply by the volume of the fecal colletion tubes (which is 0.002 liters). Then divide this by our calculated kilograms (kg), we now have the concentration in mmol/kg: 
 ```{r}
-mutate(exl_df, #dataframe to use
+new_exl_df<- mutate(exl_df, #dataframe to use
        sample_kg = sample_weight_g / 1000, #first column modified with mutate
-       acetate_mmol_kg = (acetate_mM*0.002)/sample_kg) #second column modified with mutate
+       acetate_mmol_kg = (acetate_mM*0.002)/sample_kg,
+       butyrate_mmol_kg = butyrate_mM*0.002/sample_kg) #second column modified with mutate
+
+
 ```
 If this runs off your screen and you just want to see the first few rows, you can use a pipe to view the head() of the data. (Pipes work with non-dplyr functions too, as long as tidyverse loaded).
 
@@ -243,21 +249,21 @@ Depending on the number of groups and type of analysis this can become repetitiv
 
 group_by() is often used together with summarize(), which collapses each group into a single-row summary of that group. group_by() takes as arguments the column names that contain the categorical variables for which you want to calculate the summary statistics. summarize() contains the functions and arguments to complete the calculation. So to compute the mean butyrate concentration by semester:
 ```{r}
-exl_df %>%
+new_exl_df %>%
   group_by(semester) %>%
   summarize(mean_butyrate = mean(butyrate_mmol_kg, na.rm = TRUE))
 ```
 
 However, not all participants consumed the same supplement in a given semester, and some participants did not consume a supplement at all. It is not a meaningful summary statistic to keep these participants together when calculating a mean. Group multiple columns simply by naming all the columns. One row will be returned for each unique combination of variables across the named columns:
 ```{r}
-exl_df %>%
+new_exl_df %>%
   group_by(semester, supplement_consumed) %>%
-  summarize(mean_butyrate = mean(butyrate_mmol_kg))
+  summarize(mean_butyrate = mean(butyrate_mM))
 ```
 
 You may notice that the mean column just calculated contains NAs. When grouping both by semester and supplement_consumed, there are individuals for which a butyrate measurement could not be determined (this could be due to a concentration below the limit of detection on the HPLC, or there was an issue with the integrity of the sample, or there was an issue with the sample collection protocol). When a group contains an NA the mean function is not able to do the calculation (this is becuase NA is not a number). To avoid this, we change the default behavior of the mean function by adding an argument you've seen already:
 ```{r}
-new_df <- exl_df %>%
+new_df <- new_exl_df %>%
   group_by(semester, supplement_consumed) %>%
   summarize(mean_butyrate = mean(butyrate_mmol_kg, na.rm = TRUE))
 
@@ -266,7 +272,7 @@ dim(new_df)
 
 Once these data are grouped, it is possible to summarize multiple variables at the same time, and not necessarily on the same variable (similar to completing multiple calculations within one call of the mutate function). For instance, add a column calculating the standard deviation for each group, and add another column to count the number of observations: 
 ```{r}
-exl_df %>%
+new_exl_df %>%
   group_by(semester, supplement_consumed) %>%
   summarize(mean_butyrate = mean(butyrate_mmol_kg, na.rm = TRUE), 
             sd_butyrate = sd(butyrate_mmol_kg, na.rm = TRUE), # sd() is standard deviation function
@@ -275,7 +281,7 @@ exl_df %>%
 
 It is sometimes useful to rearrange the result of a query to inspect the values. For instance, sort on mean_butyrate to put the highest concentrations first:
 ```{r}
-exl_df %>%
+new_exl_df %>%
   group_by(semester, supplement_consumed) %>%
   summarize(mean_butyrate = mean(butyrate_mmol_kg, na.rm = TRUE), 
             sd_butyrate = sd(butyrate_mmol_kg, na.rm = TRUE), 
